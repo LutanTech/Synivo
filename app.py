@@ -1,3 +1,5 @@
+import eventlet
+eventlet.monkey_patch()
 import os
 import time
 import base64
@@ -18,8 +20,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///synivo.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
-
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
 MOCK_USERS = {
     "Lutan": "000000",
     "Mesh": "123456",
@@ -133,9 +134,11 @@ def idle_monitor():
                 current_editor = None
                 socketio.emit("editor_status", None)
 
-socketio.start_background_task(idle_monitor)
-
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    socketio.run(app, port=5000, debug=True)
+
+    socketio.start_background_task(idle_monitor)
+
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host="0.0.0.0", port=port)
