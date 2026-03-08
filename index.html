@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Synivo | Collaborative Editor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Synivo | Collaborative Workspace</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -18,7 +18,10 @@
             --accent-red: #ef4444;
             --text-main: #a1a1aa;
             --text-bright: #f4f4f5;
+            --header-h: 48px;
         }
+
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
@@ -32,59 +35,35 @@
             overflow: hidden;
         }
 
-        /* Login Overlay */
         #auth-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(9, 9, 11, 0.95);
+            background: rgba(9, 9, 11, 0.98);
             z-index: 1000;
             display: flex;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(12px);
+            padding: 20px;
         }
 
         .auth-card {
             background: #18181b;
             width: 100%;
             max-width: 400px;
-            padding: 40px;
+            padding: 32px;
             border-radius: 12px;
             border: 1px solid var(--border-color);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
         }
 
-        .auth-header {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-
+        .auth-header { text-align: center; margin-bottom: 24px; }
         .auth-header i {
-            font-size: 40px;
+            font-size: 32px;
             background: linear-gradient(135deg, #3b82f6, #8b5cf6);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 16px;
-        }
-
-        .auth-header h2 {
-            color: white;
-            margin: 0;
-            letter-spacing: 2px;
-            font-size: 24px;
-        }
-
-        .auth-field {
-            margin-bottom: 20px;
-        }
-
-        .auth-field label {
-            display: block;
-            font-size: 12px;
-            text-transform: uppercase;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: #71717a;
+            margin-bottom: 12px;
         }
 
         .auth-input {
@@ -95,11 +74,8 @@
             padding: 12px;
             border-radius: 6px;
             outline: none;
-            box-sizing: border-box;
-        }
-
-        .auth-input:focus {
-            border-color: var(--accent-blue);
+            font-size: 16px;
+            margin-bottom: 16px;
         }
 
         .auth-btn {
@@ -111,60 +87,98 @@
             border-radius: 6px;
             font-weight: 700;
             cursor: pointer;
-            transition: opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
 
-        .auth-btn:hover { opacity: 0.9; }
+        .auth-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         header {
-            height: 48px;
+            height: var(--header-h);
             background: #18181b;
             display: flex;
             align-items: center;
-            padding: 0 16px;
+            padding: 0 12px;
             justify-content: space-between;
             border-bottom: 1px solid var(--border-color);
             z-index: 20;
         }
 
         .brand {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 700;
-            letter-spacing: 2px;
             color: var(--text-bright);
             display: flex;
             align-items: center;
-            gap: 12px;
-        }
-
-        .brand i {
-            font-size: 18px;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            gap: 8px;
         }
 
         #status-indicator {
-            font-size: 10px;
-            padding: 2px 10px;
+            font-size: 9px;
+            padding: 2px 8px;
             border-radius: 20px;
             background: #27272a;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 600;
+            transition: all 0.3s ease;
         }
 
         #main-container {
             display: flex;
             flex: 1;
             width: 100%;
+            height: calc(100vh - var(--header-h));
             position: relative;
         }
 
-        #editor-container {
+        #workspace-container {
             flex: 1;
-            position: relative;
+            min-width: 0;
             background: var(--bg-editor);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #rich-text-editor {
+            flex: 1;
+            padding: 40px;
+            outline: none;
+            overflow-y: auto;
+            display: none;
+            font-size: 18px;
+            line-height: 1.6;
+            background: #ffffff;
+            color: #18181b;
+        }
+
+        #rich-text-toolbar {
+            display: none;
+            padding: 8px;
+            background: #f4f4f5;
+            border-bottom: 1px solid #e4e4e7;
+            gap: 4px;
+        }
+
+        .toolbar-btn {
+            padding: 4px 10px;
+            border-radius: 4px;
+            border: 1px solid #e4e4e7;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
         }
 
         #sidebar {
@@ -173,20 +187,7 @@
             border-left: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .sidebar-header {
-            padding: 14px 16px;
-            font-size: 11px;
-            text-transform: uppercase;
-            font-weight: 700;
-            letter-spacing: 1.5px;
-            border-bottom: 1px solid var(--border-color);
-            color: #71717a;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            z-index: 30;
         }
 
         #messages {
@@ -195,64 +196,18 @@
             padding: 12px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
         }
 
         .message {
             background: #27272a;
-            padding: 10px 14px;
+            padding: 8px 12px;
             border-radius: 8px;
             font-size: 13px;
-            line-height: 1.5;
-            max-width: 85%;
-            align-self: flex-start;
-            border: 1px solid #3f3f46;
+            max-width: 90%;
         }
 
-        .message.own {
-            background: var(--accent-blue);
-            color: white;
-            align-self: flex-end;
-            border: none;
-        }
-
-        .message-user {
-            font-size: 10px;
-            font-weight: 700;
-            opacity: 0.8;
-            margin-bottom: 4px;
-            display: block;
-            text-transform: uppercase;
-        }
-
-        .input-area {
-            padding: 16px;
-            background: var(--bg-sidebar);
-            border-top: 1px solid var(--border-color);
-        }
-
-        .input-group {
-            display: flex;
-            background: #27272a;
-            border-radius: 6px;
-            padding: 4px;
-            border: 1px solid #3f3f46;
-            transition: border-color 0.2s;
-        }
-
-        .input-group:focus-within {
-            border-color: var(--accent-blue);
-        }
-
-        #msg {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: white;
-            padding: 8px 12px;
-            font-size: 13px;
-            outline: none;
-        }
+        .message.own { background: var(--accent-blue); color: white; align-self: flex-end; }
 
         .btn {
             cursor: pointer;
@@ -260,121 +215,65 @@
             border-radius: 6px;
             font-size: 12px;
             font-weight: 600;
-            transition: all 0.2s;
-            padding: 8px 14px;
+            padding: 6px 12px;
             display: flex;
             align-items: center;
-            gap: 8px;
-        }
-
-        .btn-primary { background: var(--accent-blue); color: white; }
-        .btn-primary:hover { opacity: 0.9; }
-        .btn-success { background: var(--accent-green); color: white; }
-        .btn-danger { background: var(--accent-red); color: white; }
-        .btn-ghost { background: transparent; color: var(--text-main); border: 1px solid var(--border-color); }
-        .btn-ghost:hover { background: #27272a; color: white; }
-
-        #action-bar {
-            display: flex;
-            gap: 10px;
-        }
-
-        #settings-panel {
-            position: absolute;
-            top: 8px;
-            right: 328px;
-            width: 220px;
-            background: #18181b;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
-            padding: 16px;
-            border-radius: 8px;
-            z-index: 100;
-            display: none;
-        }
-
-        .settings-section {
-            margin-bottom: 16px;
-        }
-
-        .settings-label {
-            font-size: 10px;
-            text-transform: uppercase;
-            font-weight: 800;
-            color: #52525b;
-            margin-bottom: 10px;
-            display: block;
-            letter-spacing: 1px;
-        }
-
-        .toggle-group {
-            display: flex;
-            flex-direction: column;
             gap: 6px;
+            transition: background 0.2s;
         }
 
-        .toggle-btn {
+        .btn-ghost { background: transparent; color: var(--text-main); border: 1px solid var(--border-color); }
+        .btn-toggle { background: #27272a; color: white; border: 1px solid var(--border-color); }
+        .btn-toggle i { color: var(--accent-blue); }
+
+        .lang-select {
             background: #27272a;
-            color: #d4d4d8;
-            border: 1px solid #3f3f46;
-            padding: 8px 12px;
+            color: white;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
             font-size: 12px;
-            text-align: left;
-            border-radius: 4px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.2s;
+            padding: 4px 8px;
+            outline: none;
         }
 
-        .toggle-btn.active {
-            background: rgba(59, 130, 246, 0.1);
-            color: var(--accent-blue);
-            border-color: var(--accent-blue);
-        }
-
-        #chat-toggle {
+        #toast-container {
             position: fixed;
             bottom: 20px;
             left: 20px;
-            width: 56px;
-            height: 56px;
-            border-radius: 28px;
-            background: var(--accent-blue);
-            color: white;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            z-index: 100;
-            cursor: pointer;
-            border: none;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
 
-        @media (max-width: 768px) {
+        .toast {
+            background: #18181b;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            font-size: 13px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        @media (max-width: 850px) {
             #sidebar {
-                position: fixed;
+                position: absolute;
                 right: 0;
                 top: 0;
                 bottom: 0;
-                z-index: 50;
                 transform: translateX(100%);
-                box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+                transition: transform 0.3s;
+                width: 280px;
             }
-            #sidebar.open { transform: translateX(0); #chat-toggle{
-                display: none;
-            } }
-            #chat-toggle { display: flex; }
-            #settings-panel { right: 20px; }
-            .hide-mobile { display: none; }
+            #sidebar.open { transform: translateX(0); }
         }
-
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
     </style>
 </head>
 <body>
@@ -385,134 +284,89 @@
                 <i class="fas fa-layer-group"></i>
                 <h2>SYNIVO</h2>
             </div>
-            <div class="auth-field">
-                <label>Username</label>
-                <input type="text" id="auth-user" class="auth-input" placeholder="Enter username">
-            </div>
-            <div class="auth-field">
-                <label>Password</label>
-                <input type="password" id="auth-pass" class="auth-input" placeholder="••••••••">
-            </div>
-            <button class="auth-btn" onclick="attemptLogin()">Login to Workspace</button>
-            <p id="auth-error" style="color:var(--accent-red); font-size:12px; margin-top:16px; text-align:center; display:none;">Invalid credentials</p>
+            <input type="text" id="auth-user" class="auth-input" placeholder="Username">
+            <input type="password" id="auth-pass" class="auth-input" placeholder="Password">
+            <button class="auth-btn" id="loginBtn" onclick="attemptLogin()">
+                <span class="spinner" id="authSpinner"></span>
+                <span id="loginText">Login</span>
+            </button>
+            <p id="auth-error" style="color:var(--accent-red); font-size:12px; margin-top:12px; text-align:center; display:none;">Invalid Credentials</p>
         </div>
     </div>
+
+    <div id="toast-container"></div>
 
     <header>
         <div class="brand">
             <i class="fas fa-layer-group"></i>
-            <span>SYNIVO</span>
+            <span class="hide-mobile">SYNIVO</span>
             <span id="status-indicator">Idle</span>
         </div>
-        <div id="action-bar">
-            <button class="btn btn-ghost" onclick="toggleSettings()">
-                <i class="fas fa-sliders-h"></i> <span class="hide-mobile">Settings</span>
+        <div style="display:flex; gap:8px; align-items: center;">
+            <select id="langSelect" class="lang-select" onchange="changeLanguage()">
+                <option value="python">Python</option>
+                <option value="javascript">JavaScript</option>
+                <option value="html">HTML</option>
+                <option value="css">CSS</option>
+            </select>
+            <button id="viewToggle" class="btn btn-toggle" onclick="requestToggleMode()">
+                <i class="fas fa-code"></i> <span id="viewText">Code Editor</span>
             </button>
-            <button id="logoutBtn" class="btn btn-ghost" onclick="logout()" style="color:var(--accent-red)">
-                <i class="fas fa-sign-out-alt"></i>
-            </button>
-            <button id="actionBtn" class="btn btn-ghost">Connecting...</button>
+            <button id="actionBtn" class="btn btn-ghost">Edit</button>
+            <button class="btn btn-ghost" onclick="logout()"><i class="fas fa-power-off"></i></button>
         </div>
     </header>
 
     <div id="main-container">
-        <div id="settings-panel">
-            <div class="settings-section">
-                <span class="settings-label">Workspace Mode</span>
-                <div class="toggle-group">
-                    <button id="mode-code" class="toggle-btn active" onclick="setMode('code')">
-                        <i class="fas fa-terminal"></i> Code Editor
-                    </button>
-                    <button id="mode-text" class="toggle-btn" onclick="setMode('plaintext')">
-                        <i class="fas fa-paragraph"></i> Rich Text
-                    </button>
-                </div>
+        <div id="workspace-container">
+            <div id="rich-text-toolbar">
+                <button class="toolbar-btn" onclick="execCmd('bold')"><b>B</b></button>
+                <button class="toolbar-btn" onclick="execCmd('italic')"><i>I</i></button>
+                <button class="toolbar-btn" onclick="execCmd('underline')"><u>U</u></button>
+                <button class="toolbar-btn" onclick="execCmd('insertUnorderedList')"><i class="fas fa-list-ul"></i></button>
             </div>
-            <div id="lang-section" class="settings-section">
-                <span class="settings-label">Language Syntax</span>
-                <div class="toggle-group">
-                    <button id="lang-python" class="toggle-btn active" onclick="setLang('python')">
-                        <i class="fab fa-python"></i> Python
-                    </button>
-                    <button id="lang-html" class="toggle-btn" onclick="setLang('html')">
-                        <i class="fab fa-html5"></i> HTML
-                    </button>
-                    <button id="lang-css" class="toggle-btn" onclick="setLang('css')">
-                        <i class="fab fa-css3-alt"></i> CSS
-                    </button>
-                    <button id="lang-javascript" class="toggle-btn" onclick="setLang('javascript')">
-                        <i class="fab fa-js"></i> JavaScript
-                    </button>
-                </div>
-            </div>
+            <div id="editor" style="flex:1"></div>
+            <div id="rich-text-editor" contenteditable="false"></div>
         </div>
 
-        <div id="editor-container">
-            <div id="editor" style="height: 100%; width: 100%;"></div>
-        </div>
         <aside id="sidebar">
-            <div class="sidebar-header">
-                <span>Network Chat</span>
-                <button class="btn btn-ghost btn-icon show-mobile" onclick="toggleChat()" style="padding: 4px 8px; border:none;">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
             <div id="messages"></div>
-            <div class="input-area">
-                <div class="input-group">
-                    <input id="msg" placeholder="Broadcast a message..." onkeypress="if(event.key==='Enter') sendMsg()">
-                    <button class="btn btn-primary" onclick="sendMsg()">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </div>
+            <div style="padding:12px; border-top:1px solid var(--border-color)">
+                <input id="msg" style="width:100%; background:#27272a; border:1px solid #3f3f46; color:white; padding:8px; border-radius:4px" placeholder="Chat..." onkeypress="if(event.key==='Enter') sendMsg()">
             </div>
         </aside>
     </div>
 
-    <button id="chat-toggle" onclick="toggleChat()">
-        <i class="fas fa-comments"></i>
-    </button>
-
     <script>
         const API_URL = "https://synivo.onrender.com";
-        let user = null;
-        let socket = null;
-        let editor = null;
-        let currentEditor = null;
-        let isLocalUpdate = false;
-        let currentMode = 'code';
-        let currentLanguage = 'python';
+        let user, socket, editor, currentEditor, currentMode = "code", isLocalUpdate = false;
+        const richEditor = document.getElementById('rich-text-editor');
 
-        function setCookie(name, value, days) {
-            let expires = "";
-            if (days) {
-                const date = new Date();
-                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-                expires = "; expires=" + date.toUTCString();
-            }
-            document.cookie = name + "=" + (value || "") + expires + "; path=/";
+        function showToast(msg, icon = 'info-circle') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `<i class="fas fa-${icon}"></i> <span>${msg}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
-        function getCookie(name) {
-            const nameEQ = name + "=";
-            const ca = document.cookie.split(';');
-            for(let i=0; i < ca.length; i++) {
-                let c = ca[i];
-                while (c.charAt(0) == ' ') c = c.substring(1, c.length);
-                if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
-            }
-            return null;
-        }
-
-        function eraseCookie(name) {
-            document.cookie = name+'=; Max-Age=-99999999;';
-        }
+        function setCookie(n, v) { document.cookie = n + "=" + v + "; path=/; max-age=604800"; }
+        function getCookie(n) { return document.cookie.split('; ').find(r => r.startsWith(n+'='))?.split('=')[1]; }
+        function eraseCookie(n) { document.cookie = n + "=; Max-Age=-1; path=/"; }
 
         async function attemptLogin() {
             const username = document.getElementById('auth-user').value;
             const password = document.getElementById('auth-pass').value;
-            const errorEl = document.getElementById('auth-error');
-
+            const btn = document.getElementById('loginBtn');
+            const spinner = document.getElementById('authSpinner');
+            const text = document.getElementById('loginText');
+            btn.disabled = true;
+            spinner.style.display = 'block';
+            text.style.display = 'none';
             try {
                 const res = await fetch(`${API_URL}/login`, {
                     method: 'POST',
@@ -520,160 +374,151 @@
                     body: JSON.stringify({ username, password })
                 });
                 const data = await res.json();
-
-                if (data.success) {
-                    user = data.user;
-                    setCookie('synivo_auth', data.token, 7);
-                    initApp();
+                if (data.success) { 
+                    user = data.user; 
+                    setCookie('syn_auth', data.token); 
+                    initApp(); 
                 } else {
-                    errorEl.style.display = 'block';
+                    document.getElementById('auth-error').style.display = 'block';
                 }
             } catch (e) {
-                console.error(e);
+                showToast("Connection failed", "exclamation-triangle");
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = 'none';
+                text.style.display = 'block';
             }
         }
 
         async function checkAutoLogin() {
-            const token = getCookie('synivo_auth');
-            if (token) {
-                try {
-                    const res = await fetch(`${API_URL}/verify`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ token })
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                        user = data.user;
-                        initApp();
-                        return;
-                    }
-                } catch (e) {}
+            const t = getCookie('syn_auth');
+            if (t) {
+                const res = await fetch(`${API_URL}/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: t })
+                });
+                const d = await res.json();
+                if (d.success) { user = d.user; initApp(); return; }
             }
             document.getElementById('auth-overlay').style.display = 'flex';
-        }
-
-        function logout() {
-            eraseCookie('synivo_auth');
-            window.location.reload();
         }
 
         function initApp() {
             document.getElementById('auth-overlay').style.display = 'none';
             socket = io(API_URL);
-            
             require.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs" }});
-            require(["vs/editor/editor.main"], function() {
-                setupEditor();
-                setupSocketHandlers();
+            require(["vs/editor/editor.main"], () => {
+                editor = monaco.editor.create(document.getElementById("editor"), {
+                    value: "", language: "python", theme: "vs-dark", automaticLayout: true,
+                    readOnly: true, fontSize: 14, minimap: { enabled: false }
+                });
+                editor.onDidChangeModelContent(() => {
+                    if (!isLocalUpdate && currentEditor === user && currentMode === "code") 
+                        socket.emit("text_update", { user, text: editor.getValue() });
+                });
+                richEditor.addEventListener('input', () => {
+                    if (!isLocalUpdate && currentEditor === user && currentMode === "rich-text")
+                        socket.emit("text_update", { user, text: richEditor.innerHTML });
+                });
+                setupSockets();
+                showToast(`Welcome, ${user}`, 'user-check');
             });
         }
 
-        function setupEditor() {
-            editor = monaco.editor.create(document.getElementById("editor"), {
-                value: "",
-                language: "html",
-                theme: "vs-dark",
-                automaticLayout: true,
-                readOnly: true,
-                fontSize: 14,
-                fontFamily: "'Fira Code', monospace",
-                minimap: { enabled: false },
-                lineNumbers: "on",
-                roundedSelection: true,
-                domReadOnly: true,
-                padding: { top: 16 }
-            });
-
-            editor.onDidChangeModelContent(() => {
-                if (isLocalUpdate || currentEditor !== user) return;
-                socket.emit("text_update", { user: user, text: editor.getValue() });
-            });
-        }
-
-        function setupSocketHandlers() {
-            socket.emit("join", { user: user });
-
-            socket.on("update_text", (text) => {
-                if (editor && editor.getValue() !== text) {
-                    isLocalUpdate = true;
-                    const pos = editor.getPosition();
-                    editor.setValue(text);
-                    if (pos) editor.setPosition(pos);
-                    isLocalUpdate = false;
-                }
-            });
-
-            socket.on("editor_status", (current) => {
-                currentEditor = current;
-                const indicator = document.getElementById("status-indicator");
-                const btn = document.getElementById("actionBtn");
-
-                if (current === user) {
-                    editor.updateOptions({ readOnly: false, domReadOnly: false });
-                    indicator.innerText = "Control: Active";
-                    indicator.style.background = "var(--accent-blue)";
-                    btn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Release';
-                    btn.className = "btn btn-danger";
-                    btn.onclick = stopEdit;
-                } else if (current) {
-                    editor.updateOptions({ readOnly: true, domReadOnly: true });
-                    indicator.innerText = `Busy: ${current}`;
-                    indicator.style.background = "#27272a";
-                    btn.innerHTML = '<i class="fas fa-lock"></i> Locked';
-                    btn.className = "btn btn-ghost";
-                    btn.disabled = true;
+        function setupSockets() {
+            socket.emit("join", { user });
+            socket.on("update_text", t => {
+                isLocalUpdate = true;
+                if (currentMode === "code") {
+                    if (editor.getValue() !== t) editor.setValue(t);
                 } else {
-                    editor.updateOptions({ readOnly: true, domReadOnly: true });
-                    indicator.innerText = "Status: Open";
-                    indicator.style.background = "#27272a";
-                    btn.innerHTML = '<i class="fas fa-terminal"></i> Request Edit';
-                    btn.className = "btn btn-success";
-                    btn.onclick = requestEdit;
-                    btn.disabled = false;
+                    if (richEditor.innerHTML !== t) richEditor.innerHTML = t;
                 }
+                isLocalUpdate = false;
             });
-
-            socket.on("chat_message", (data) => {
-                const container = document.getElementById("messages");
-                const div = document.createElement("div");
-                div.className = `message ${data.user === user ? 'own' : ''}`;
-                div.innerHTML = `<span class="message-user">${data.user}</span>${data.message}`;
-                container.appendChild(div);
-                container.scrollTop = container.scrollHeight;
+            socket.on("update_mode", m => {
+                if(currentMode !== m) {
+                    showToast(`Switched to ${m === 'code' ? 'Code' : 'Rich Text'} mode`, 'exchange-alt');
+                }
+                currentMode = m;
+                applyModeUI();
+            });
+            socket.on("editor_status", c => {
+                if (c && c !== currentEditor && c !== user) {
+                    showToast(`${c} is now editing`, 'pen-nib');
+                } else if (!c && currentEditor) {
+                    showToast("Workspace is now open", 'unlock');
+                }
+                currentEditor = c;
+                updateStatusUI();
+            });
+            socket.on("chat_message", d => {
+                const m = document.getElementById("messages");
+                const el = document.createElement("div");
+                el.className = `message ${d.user === user ? 'own' : ''}`;
+                el.innerHTML = `<b>${d.user}</b><br>${d.message}`;
+                m.appendChild(el); m.scrollTop = m.scrollHeight;
             });
         }
 
-        function toggleChat() { document.getElementById('sidebar').classList.toggle('open'); }
-        function toggleSettings() {
-            const panel = document.getElementById('settings-panel');
-            panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+        function changeLanguage() {
+            const lang = document.getElementById('langSelect').value;
+            if (editor) {
+                monaco.editor.setModelLanguage(editor.getModel(), lang);
+                showToast(`Language set to ${lang.toUpperCase()}`, 'code');
+            }
         }
 
-        function setMode(mode) {
-            currentMode = mode;
-            document.getElementById('mode-code').classList.toggle('active', mode === 'code');
-            document.getElementById('mode-text').classList.toggle('active', mode === 'plaintext');
-            if (editor) monaco.editor.setModelLanguage(editor.getModel(), mode === 'code' ? currentLanguage : 'plaintext');
+        function applyModeUI() {
+            const isCode = currentMode === "code";
+            document.getElementById('editor').style.display = isCode ? 'block' : 'none';
+            document.getElementById('rich-text-editor').style.display = isCode ? 'none' : 'block';
+            document.getElementById('rich-text-toolbar').style.display = isCode ? 'none' : 'flex';
+            document.getElementById('langSelect').style.display = isCode ? 'block' : 'none';
+            document.getElementById('viewText').innerText = isCode ? "Code Editor" : "Rich Text";
+            document.getElementById('viewToggle').querySelector('i').className = isCode ? "fas fa-code" : "fas fa-align-left";
+            updateStatusUI();
         }
 
-        function setLang(lang) {
-            currentLanguage = lang;
-            ['python', 'html', 'css', 'javascript'].forEach(l => {
-                document.getElementById(`lang-${l}`).classList.toggle('active', l === lang);
-            });
-            if (editor && currentMode === 'code') monaco.editor.setModelLanguage(editor.getModel(), lang);
+        function updateStatusUI() {
+            const i = document.getElementById("status-indicator");
+            const b = document.getElementById("actionBtn");
+            const l = document.getElementById("langSelect");
+            const canEdit = currentEditor === user;
+            if (currentMode === "code") {
+                editor.updateOptions({ readOnly: !canEdit });
+            } else {
+                richEditor.contentEditable = canEdit;
+            }
+            l.disabled = !canEdit;
+            if (canEdit) {
+                i.innerText = "Editing"; i.style.background = "var(--accent-blue)";
+                b.innerText = "Release"; b.onclick = () => socket.emit("stop_edit");
+            } else if (currentEditor) {
+                i.innerText = currentEditor; i.style.background = "#27272a";
+                b.innerText = "Locked"; b.onclick = null;
+            } else {
+                i.innerText = "Open"; i.style.background = "#27272a";
+                b.innerText = "Edit"; b.onclick = () => socket.emit("request_edit", { user });
+            }
         }
 
-        function requestEdit() { socket.emit("request_edit", { user: user }); }
-        function stopEdit() { socket.emit("stop_edit"); }
+        function requestToggleMode() {
+            if (currentEditor === user) {
+                const nextMode = currentMode === "code" ? "rich-text" : "code";
+                socket.emit("mode_update", { user, mode: nextMode });
+            } else {
+                showToast("You must be editing to change mode", "lock");
+            }
+        }
+
+        function execCmd(c) { document.execCommand(c, false, null); }
         function sendMsg() {
-            const input = document.getElementById("msg");
-            if (!input.value.trim()) return;
-            socket.emit("chat_message", { user: user, message: input.value });
-            input.value = "";
+            const i = document.getElementById("msg");
+            if (i.value.trim()) { socket.emit("chat_message", { user, message: i.value }); i.value = ""; }
         }
-
+        function logout() { eraseCookie('syn_auth'); location.reload(); }
         window.onload = checkAutoLogin;
     </script>
 </body>

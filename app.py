@@ -7,7 +7,7 @@ import json
 import uuid
 import secrets
 import string
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
@@ -21,6 +21,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
+
 MOCK_USERS = {
     "Lutan": "000000",
     "Mesh": "123456",
@@ -33,7 +34,14 @@ class Chat(db.Model):
     message = db.Column(db.Text)
     timestamp = db.Column(db.Float, default=time.time)
 
+class DocumentState(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text)
+    mode = db.Column(db.String(20), default="code")
+    last_saved = db.Column(db.Float)
+
 shared_text = ""
+current_mode = "code"
 current_editor = None
 last_typing_time = 0
 
@@ -59,19 +67,26 @@ def decode_user_token(token):
     except:
         return None
 
+def save_document_to_db():
+    global shared_text, current_mode
+    doc = DocumentState.query.first()
+    if not doc:
+        doc = DocumentState(content=shared_text, mode=current_mode, last_saved=time.time())
+        db.session.add(doc)
+    else:
+        doc.content = shared_text
+        doc.mode = current_mode
+        doc.last_saved = time.time()
+    db.session.commit()
+
 @app.route("/login", methods=["POST"])
 def login():
     data = request.json
     username = data.get("username")
     password = data.get("password")
-
     if username in MOCK_USERS and MOCK_USERS[username] == password:
         token = encode_user_token(username)
-        return jsonify({
-            "success": True,
-            "user": username,
-            "token": token
-        })
+        return jsonify({"success": True, "user": username, "token": token})
     return jsonify({"success": False, "error": "Invalid credentials"}), 401
 
 @app.route("/verify", methods=["POST"])
@@ -90,6 +105,7 @@ def get_messages():
 @socketio.on("join")
 def handle_join(data):
     emit("update_text", shared_text)
+    emit("update_mode", current_mode)
     emit("editor_status", current_editor, broadcast=True)
 
 @socketio.on("request_edit")
@@ -109,6 +125,14 @@ def handle_text_update(data):
         last_typing_time = time.time()
         emit("update_text", shared_text, broadcast=True)
 
+@socketio.on("mode_update")
+def handle_mode_update(data):
+    global current_mode
+    if data.get("user") == current_editor:
+        current_mode = data.get("mode")
+        save_document_to_db()
+        emit("update_mode", current_mode, broadcast=True)
+
 @socketio.on("chat_message")
 def handle_chat_message(data):
     user = data.get("user")
@@ -122,6 +146,8 @@ def handle_chat_message(data):
 @socketio.on("stop_edit")
 def handle_stop_edit():
     global current_editor
+    if current_editor:
+        save_document_to_db()
     current_editor = None
     emit("editor_status", None, broadcast=True)
 
@@ -131,14 +157,22 @@ def idle_monitor():
         socketio.sleep(5)
         if current_editor:
             if time.time() - last_typing_time > 60:
+                save_document_to_db()
                 current_editor = None
                 socketio.emit("editor_status", None)
 
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
+        doc = DocumentState.query.first()
+        if doc:
+            shared_text = doc.content
+            current_mode = doc.mode or "code"
 
     socketio.start_background_task(idle_monitor)
-
-    port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host="0.0.0.0", port=port)
+    port = int(os.environ.get("PORT", 5002))
+    
+    try:
+        socketio.run(app, host="localhost", port=port)
+    except Exception as e:
+        print(f"Error starting server on port {port}: {e}")
